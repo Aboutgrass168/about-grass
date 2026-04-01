@@ -1,0 +1,156 @@
+import type { Field } from 'payload'
+import deepMerge from '@/utilities/deepMerge'
+
+export type LinkAppearances = 'default' | 'outline'
+
+export const appearanceOptions: Record<LinkAppearances, { label: string; value: string }> = {
+  default: {
+    label: 'Default',
+    value: 'default',
+  },
+  outline: {
+    label: 'Outline',
+    value: 'outline',
+  },
+}
+
+type LinkType = (options?: {
+  appearances?: LinkAppearances[] | false
+  disableLabel?: boolean
+  overrides?: Record<string, unknown>
+}) => Field
+
+export const link: LinkType = ({ appearances, disableLabel = false, overrides = {} } = {}) => {
+  const linkResult: Field = {
+    name: 'link',
+    type: 'group',
+    admin: {
+      hideGutter: true,
+    },
+    fields: [
+      {
+        type: 'row',
+        fields: [
+          {
+            name: 'type',
+            type: 'radio',
+            admin: {
+              layout: 'horizontal',
+              width: '50%',
+            },
+            defaultValue: 'reference',
+            options: [
+              {
+                label: 'No Sub menu',
+                value: 'reference',
+              },
+              {
+                label: 'Have Sub menu',
+                value: 'custom',
+              },
+            ],
+          },
+          {
+            name: 'newTab',
+            type: 'checkbox',
+            admin: {
+              style: {
+                alignSelf: 'flex-end',
+              },
+              width: '50%',
+            },
+            label: 'Open in new tab',
+          },
+        ],
+      },
+    ],
+  }
+
+  const linkTypes: Field[] = [
+    {
+      name: 'url',
+      type: 'text',
+      label: 'Custom URL',
+      required: true,
+    },
+  ]
+
+  if (!disableLabel) {
+    linkResult.fields.push({
+      type: 'row',
+      fields: [
+        ...linkTypes,
+        {
+          name: 'label',
+          type: 'text',
+          admin: {
+            width: '50%',
+          },
+          label: 'Label',
+          required: true,
+        },
+      ],
+    })
+
+    linkResult.fields.push({
+      name: 'submenu',
+      type: 'array',
+      label: 'Submenu',
+      admin: {
+        condition: (_, siblingData) => siblingData?.type !== 'reference',
+      },
+      fields: [
+        {
+          name: 'media',
+          type: 'upload',
+          relationTo: 'media',
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'title',
+              type: 'textarea',
+              required: true,
+              label: 'Title',
+              admin: {
+                width: '50%',
+              },
+            },
+            {
+              name: 'url',
+              type: 'text',
+              required: true,
+              label: 'Url',
+              admin: {
+                width: '50%',
+              },
+            },
+          ],
+        },
+      ],
+    })
+  } else {
+    linkResult.fields = [...linkResult.fields, ...linkTypes]
+  }
+
+  if (appearances !== false) {
+    let appearanceOptionsToUse = [appearanceOptions.default, appearanceOptions.outline]
+
+    if (appearances) {
+      appearanceOptionsToUse = appearances.map((appearance) => appearanceOptions[appearance])
+    }
+
+    linkResult.fields.push({
+      name: 'appearance',
+      type: 'select',
+      admin: {
+        description: 'Choose how the link should be rendered.',
+      },
+      defaultValue: 'default',
+      options: appearanceOptionsToUse,
+    })
+  }
+
+  return deepMerge(linkResult, overrides)
+}
